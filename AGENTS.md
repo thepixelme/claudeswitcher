@@ -46,7 +46,7 @@ Each of these has a *why* in [docs/code.md](docs/code.md). The short version:
 
 - **Ad-hoc rebuilds re-prompt for TCC.** The macOS Automation grant is keyed on the binary's code-signature hash. Every ad-hoc rebuild produces a fresh hash, so macOS treats it as a different app. Not a bug; goes away with Developer ID signing.
 - **Config-dir validation is shallow.** An empty `~/.claude-personal` directory passes the check. A logged-out account surfaces its problem only when the user tries to use Claude inside VS Code. Documented as a known limitation.
-- **The app needs `NSAppleEventsUsageDescription`.** Required because `NSRunningApplication.terminate()` sends an Apple Event. The string must be set via `INFOPLIST_KEY_NSAppleEventsUsageDescription` on the build target. See [README.md](README.md) for the exact value.
+- **The app needs `NSAppleEventsUsageDescription`.** Required because `NSRunningApplication.terminate()` sends an Apple Event to ask VS Code to quit. The string must be set via `INFOPLIST_KEY_NSAppleEventsUsageDescription` on the build target. See [README.md](README.md) for the exact value. (The setup-screen Log In buttons do **not** use Apple Events — they hand a `.command` file to Launch Services. An earlier iteration used `NSAppleScript`, but the resulting Automation TCC prompt never surfaced for this `LSUIElement` app, leaving users with an invisible failure. Don't reintroduce AppleScript here.)
 - **App Sandbox is disabled.** This app needs to launch other apps with custom env vars and enumerate running apps via `NSWorkspace`. Sandboxing is more trouble than it's worth here. The trade-off precludes Mac App Store distribution.
 
 ## When in doubt

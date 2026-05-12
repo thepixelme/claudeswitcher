@@ -31,14 +31,16 @@ The app appears in the menu bar (no Dock icon).
 
 ## Initial setup (one time per account)
 
-ClaudeSwitcher's first-run popover shows the same commands, but for reference:
+Open the menu bar popover. The first-run screen offers a **Log In — Personal** and a **Log In — Work** button. Each one writes a tiny `.command` script and hands it to Launch Services, which opens a new Terminal window running:
 
 ```
 CLAUDE_CONFIG_DIR=~/.claude-personal claude
 CLAUDE_CONFIG_DIR=~/.claude-work     claude
 ```
 
-Each command opens a browser login flow; complete both. The two `~/.claude-*` directories must be present and distinct (not the same path via symlink) before the main UI activates.
+Complete the browser OAuth flow for each, then exit the REPL. The commands stay visible above the buttons as a copy-paste fallback for users on iTerm, Ghostty, or any non-Terminal workflow. (If you've changed the default app for `.command` files, the Log In buttons will respect that — Launch Services routes the document to whichever terminal you've registered.)
+
+The setup screen polls every 2 s for the two `~/.claude-*` directories and advances to the main menu automatically once both exist. No "I've logged in" click required. The two directories must be present and distinct (not the same path via symlink) before the main UI activates — if they collide, the setup screen surfaces an inline error and refuses to advance.
 
 ## Day-to-day usage
 
@@ -60,6 +62,8 @@ The first time you switch accounts, macOS shows:
 Approve it. ClaudeSwitcher uses `NSRunningApplication.terminate()` to ask VS Code to quit, which sends an Apple Event — that's the permission being requested. **Not malware.** This grant lives under *System Settings → Privacy & Security → Automation* if you ever need to revoke it.
 
 If you deny the prompt, the launcher reports `quitRequestFailed` with instructions for re-enabling. You won't be stuck.
+
+(The Log In buttons on the setup screen do **not** need this permission — they open `.command` files via Launch Services rather than scripting Terminal, so no Automation TCC class applies.)
 
 ## Known quirks
 

@@ -45,13 +45,20 @@ The icon updates the instant a launch completes, without requiring the user to r
 
 ## First-run setup
 
-**Behavior.** Setup screen appears whenever `!hasCompletedSetup` OR either config dir is missing. The screen shows the curl install command and per-account `claude` login commands, all selectable. Three layouts depending on what's already present on disk:
+**Behavior.** Setup screen appears whenever `!hasCompletedSetup` OR either config dir is missing. The screen shows the curl install command and per-account `claude` login commands as copyable text, plus a **Log In — Personal** and **Log In — Work** button next to each command. Three layouts depending on what's already present on disk:
 
-- **Both `~/.claude-personal` and `~/.claude-work` exist** → short *"Both accounts detected."* status. Click "Get Started" to advance.
-- **Exactly one exists** → full instructions plus a hint *"Personal detected; Work still needed."* (or the converse).
+- **Both `~/.claude-personal` and `~/.claude-work` exist** → short *"Both accounts detected."* status; the screen auto-advances within ~2 s (sooner on next popover open).
+- **Exactly one exists** → full instructions plus a hint *"Personal detected; Work still needed."* (or the converse); the already-detected account's button is disabled and labeled *"Logged in — …"*.
 - **Neither exists** → full instructions, no hint.
 
-**Mechanism.** The popover root (`MenuBarView`) gates on `hasCompletedSetup && personalConfigDirExists && workConfigDirExists`. `SetupView` switches over `(personalConfigDirExists, workConfigDirExists)` for its three layouts. "Get Started" re-stats both dirs at click time, then runs the same-canonical-path check (`resolvingSymlinksInPath().standardizedFileURL`) before flipping `hasCompletedSetup = true`. The re-stat is necessary because the user may have just finished `claude` login in another terminal while the popover was open.
+**Mechanism — Log In buttons.** Each button writes a tiny `#!/bin/zsh` script containing `CLAUDE_CONFIG_DIR=… claude` to a `.command` file under `FileManager.default.temporaryDirectory`, `chmod 755`s it, and hands the URL to `NSWorkspace.shared.open(_:)`. Launch Services routes the document to the user's default `.command` handler — Terminal.app out of the box; iTerm/Ghostty if remapped — which opens a new window and executes the script. This deliberately avoids `NSAppleScript`: an earlier iteration drove Terminal via `tell application "Terminal" / do script`, but the resulting `errAEEventNotPermitted` failure mode never showed a system consent dialog for a `LSUIElement` app, so users were stuck with no recourse. Document-open does not require the Automation TCC class. Write/open failures surface via the existing `validationError` `@State`.
+
+**Mechanism — auto-advance.** The popover root (`MenuBarView`) gates on `hasCompletedSetup && personalConfigDirExists && workConfigDirExists`. `SetupView` switches over `(personalConfigDirExists, workConfigDirExists)` for its three layouts. A private `tryAutoAdvance()` calls `appState.refreshConfigDirExistence()`, returns early if either dir is missing, runs the same-canonical-path check (`resolvingSymlinksInPath().standardizedFileURL`), and only then flips `hasCompletedSetup = true`. Two signals drive it:
+
+- `.onAppear { tryAutoAdvance() }` — covers cold-open when both dirs already exist; without it the user would stare at "Both accounts detected." for up to 2 s.
+- `.onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect())` — covers the case where the popover stays open while the second `claude` login finishes in Terminal.
+
+If the canonical-path check fails (symlink collision), `validationError` displays the inline error and the screen does **not** advance. Missing dirs are silent: the user keeps logging in.
 
 ## Post-setup recovery
 

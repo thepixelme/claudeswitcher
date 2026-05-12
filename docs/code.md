@@ -101,11 +101,18 @@ The launch-button action ([`MenuBarView.swift:64-91`](../ClaudeSwitcher/MenuBarV
 
 ### `SetupView`
 
-Three-way detection ([`MenuBarView.swift:122-133`](../ClaudeSwitcher/MenuBarView.swift#L122-L133)): both dirs present → short "Both accounts detected" status; one present → instructions + hint about which side is done; neither → full instructions.
+Three-way detection: both dirs present → short "Both accounts detected" status; one present → instructions + hint about which side is done; neither → full instructions. Per-account **Log In — …** buttons sit beside each copyable command; the already-detected account's button is disabled and re-labeled "Logged in — …".
 
-**Re-validation at click time** ([`MenuBarView.swift:142-145`](../ClaudeSwitcher/MenuBarView.swift#L142-L145)). The `*ConfigDirExists` flags on `AppState` are stale by the duration the popover has been open — the user may have just finished `claude` login in another terminal. Re-stat at click.
+**Log In buttons launch a `.command` file** (`openLoginInTerminal`). Each button writes `CLAUDE_CONFIG_DIR=<account.configDir> claude` (wrapped in a `#!/bin/zsh` shebang) to `FileManager.default.temporaryDirectory/claudeswitcher-login-<account>.command`, sets `0o755`, and calls `NSWorkspace.shared.open(_:)`. Launch Services hands the document to the registered `.command` handler (Terminal.app out of the box; iTerm/Ghostty if remapped). **Don't "simplify" back to `NSAppleScript`.** A previous implementation drove Terminal via `tell application "Terminal" / do script` and hit `errAEEventNotPermitted` with no consent dialog ever appearing — for `LSUIElement` apps the Automation TCC prompt does not reliably surface, leaving users with an invisible, unrecoverable failure. `.command` files are document-open, not Apple Events, so the Automation TCC class doesn't apply. The login shell that Terminal spawns to run the script still inherits the user's PATH (Homebrew/nvm/asdf), so `claude` resolves normally.
 
-**Same-canonical-path check** ([`MenuBarView.swift:162-169`](../ClaudeSwitcher/MenuBarView.swift#L162-L169)). If both expanded paths resolve to the same canonical location — user symlinked them, or pointed both at the same dir — the app's whole premise is silently broken: both launch buttons would inject identical `CLAUDE_CONFIG_DIR`. `resolvingSymlinksInPath().standardizedFileURL` catches the symlink case and normalizes `./..` / trailing slashes. **Don't reduce this to string equality** — that would let the symlink case pass.
+**Auto-advance via `tryAutoAdvance()`** (private function). Refreshes `*ConfigDirExists` flags, returns early if either dir is missing, runs the same-canonical-path check, and only then flips `hasCompletedSetup = true`. Two signals fire it:
+
+- `.onAppear { tryAutoAdvance() }` — cold-open path. If both dirs already exist when the popover opens, the screen advances to `MainMenuView` immediately. Without this, the user would briefly see "Both accounts detected." for up to 2 s before the first timer tick.
+- `.onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect())` — popover-stays-open path. Covers the user who keeps the popover visible while finishing the second `claude` login in Terminal.
+
+The redundant "I've logged in — Get Started" button has been removed. The `*ConfigDirExists` flags on `AppState` are still re-stat'd by every `tryAutoAdvance` call — same staleness concern as before, just answered by polling instead of by a click.
+
+**Same-canonical-path check.** If both expanded paths resolve to the same canonical location — user symlinked them, or pointed both at the same dir — the app's whole premise is silently broken: both launch buttons would inject identical `CLAUDE_CONFIG_DIR`. `resolvingSymlinksInPath().standardizedFileURL` catches the symlink case and normalizes `./..` / trailing slashes. **Don't reduce this to string equality** — that would let the symlink case pass. On collision, `tryAutoAdvance` sets `validationError` and refuses to advance.
 
 ---
 

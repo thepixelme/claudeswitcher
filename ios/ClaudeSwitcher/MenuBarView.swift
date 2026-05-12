@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 struct MenuBarView: View {
@@ -114,6 +115,13 @@ struct SetupView: View {
     @EnvironmentObject var appState: AppState
     @State private var validationError: String? = nil
 
+    // Polls every 2s so the popover advances if the user finishes the
+    // second `claude` login while keeping the popover open. The .onAppear
+    // path below handles the cold-open case (both dirs already present);
+    // without it the user would stare at "Both accounts detected." for
+    // up to 2s waiting for the first tick.
+    private let autoAdvanceTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Welcome to ClaudeSwitcher").font(.headline)
@@ -135,43 +143,10 @@ struct SetupView: View {
             if let validationError {
                 Text(validationError).font(.caption).foregroundStyle(.red)
             }
-
-            Button("I've logged in — Get Started") {
-                // Re-validate at click time. The user may have just
-                // finished `claude` login in another terminal.
-                let personal = ClaudeAccount.personal.configDirExists
-                let work = ClaudeAccount.work.configDirExists
-                appState.personalConfigDirExists = personal
-                appState.workConfigDirExists = work
-
-                guard personal && work else {
-                    let missing = !personal ? "~/.claude-personal" : "~/.claude-work"
-                    validationError = "\(missing) not found. Run the login command above and try again."
-                    return
-                }
-
-                // Same-directory / symlink check. If both expanded paths
-                // resolve to the same canonical location (symlinked,
-                // hardlinked, or both env-var inits pointed at the same
-                // dir), the entire premise of the app is broken — both
-                // launch buttons would inject identical CLAUDE_CONFIG_DIR
-                // and account separation would be silently lost.
-                // resolvingSymlinksInPath catches symlinks;
-                // standardizedFileURL collapses ./.. and trailing-slash
-                // differences.
-                let personalCanonical = URL(fileURLWithPath: ClaudeAccount.personal.expandedConfigDir)
-                    .resolvingSymlinksInPath().standardizedFileURL
-                let workCanonical = URL(fileURLWithPath: ClaudeAccount.work.expandedConfigDir)
-                    .resolvingSymlinksInPath().standardizedFileURL
-                guard personalCanonical != workCanonical else {
-                    validationError = "~/.claude-personal and ~/.claude-work resolve to the same directory. They must be separate so each account has its own config."
-                    return
-                }
-
-                appState.hasCompletedSetup = true
-            }
         }
         .padding(12)
+        .onAppear { tryAutoAdvance() }
+        .onReceive(autoAdvanceTimer) { _ in tryAutoAdvance() }
     }
 
     @ViewBuilder
@@ -194,15 +169,92 @@ struct SetupView: View {
             .foregroundStyle(.secondary)
             .padding(.top, 4)
         ForEach(ClaudeAccount.allCases) { account in
-            // account.configDir form (~/.claude-personal) is what we want
-            // users to type — the shell expands the tilde, and the
-            // unexpanded form is portable across machines.
-            Text("CLAUDE_CONFIG_DIR=\(account.configDir) claude")
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
-                .padding(6)
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(4)
+            let dirExists = (account == .personal)
+                ? appState.personalConfigDirExists
+                : appState.workConfigDirExists
+            VStack(alignment: .leading, spacing: 4) {
+                // account.configDir form (~/.claude-personal) is what we want
+                // users to type — the shell expands the tilde, and the
+                // unexpanded form is portable across machines.
+                Text("CLAUDE_CONFIG_DIR=\(account.configDir) claude")
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(6)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    openLoginInTerminal(for: account)
+                } label: {
+                    if dirExists {
+                        Label("Logged in — \(account.displayName)", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Label("Log In — \(account.displayName)", systemImage: "person.crop.circle.badge.plus")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .disabled(dirExists)
+            }
+        }
+    }
+
+    // Mirrors the prior "Get Started" closure: refresh, gate on both
+    // dirs, then run the same-canonical-path safety check. Same-path
+    // collision is the one failure mode that still needs explicit UI —
+    // missing dirs simply means "not ready yet, keep waiting."
+    @MainActor
+    private func tryAutoAdvance() {
+        appState.refreshConfigDirExistence()
+        guard appState.personalConfigDirExists, appState.workConfigDirExists else {
+            return
+        }
+
+        // Same-directory / symlink check. If both expanded paths resolve
+        // to the same canonical location (symlinked, hardlinked, or both
+        // env-var inits pointed at the same dir), the entire premise of
+        // the app is broken — both launch buttons would inject identical
+        // CLAUDE_CONFIG_DIR and account separation would be silently lost.
+        let personalCanonical = URL(fileURLWithPath: ClaudeAccount.personal.expandedConfigDir)
+            .resolvingSymlinksInPath().standardizedFileURL
+        let workCanonical = URL(fileURLWithPath: ClaudeAccount.work.expandedConfigDir)
+            .resolvingSymlinksInPath().standardizedFileURL
+        guard personalCanonical != workCanonical else {
+            validationError = "~/.claude-personal and ~/.claude-work resolve to the same directory. They must be separate so each account has its own config."
+            return
+        }
+
+        appState.hasCompletedSetup = true
+    }
+
+    // We hand a .command file to Launch Services rather than scripting
+    // Terminal via NSAppleScript. The AppleScript path required the
+    // Automation TCC class, and for an LSUIElement (menu-bar-only) app
+    // the consent dialog does not surface reliably — users hit
+    // errAEEventNotPermitted with no way to recover. Opening a .command
+    // file is a document-open, not Apple Events, so no TCC class applies.
+    @MainActor
+    private func openLoginInTerminal(for account: ClaudeAccount) {
+        let command = "CLAUDE_CONFIG_DIR=\(account.configDir) claude"
+        let script = """
+        #!/bin/zsh
+        \(command)
+
+        """
+        let filename = "claudeswitcher-login-\(account.displayName.lowercased()).command"
+        let scriptURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        do {
+            try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o755],
+                ofItemAtPath: scriptURL.path
+            )
+        } catch {
+            validationError = "Could not prepare login command: \(error.localizedDescription)"
+            return
+        }
+        if !NSWorkspace.shared.open(scriptURL) {
+            validationError = "Could not open the login command in a terminal. Make sure Terminal.app (or your preferred terminal) is installed."
         }
     }
 }

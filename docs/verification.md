@@ -74,12 +74,12 @@ Same as #1 with Work.
 
 **Setup.** Clean machine (or revoked Automation grant — but better to test on truly clean).
 **Action.** Trigger the first quit-and-relaunch.
-**Expected.** macOS shows *"ClaudeSwitcher would like to control 'Visual Studio Code'"*. Approve. Subsequent switches must not prompt again until the next ad-hoc rebuild.
+**Expected.** macOS shows *"ClaudeSwitcher would like to control 'Visual Studio Code'"* with the usage string *"ClaudeSwitcher quits Visual Studio Code so it can be relaunched under a different Claude account."* Approve. Subsequent switches must not prompt again until the next ad-hoc rebuild. Clicking *Log In — Personal* / *Log In — Work* on the setup screen must **not** show any Automation prompt — those buttons go through Launch Services (document-open), not Apple Events.
 
 ### 9. Missing config dir (post-setup recovery)
 
 **Setup.** Quit ClaudeSwitcher. `rm -rf ~/.claude-work`. Reopen ClaudeSwitcher.
-**Expected.** Menu bar icon shows the warning symbol **immediately on launch, before opening the popover** (seeded `*ConfigDirExists` flags do this without an `onAppear` round-trip). Open the popover — `SetupView` takes over (Work missing). Re-create `~/.claude-work` via the displayed login command and click *Get Started*; expect to land back on `MainMenuView` with both buttons enabled and the icon back to the last-launched account symbol.
+**Expected.** Menu bar icon shows the warning symbol **immediately on launch, before opening the popover** (seeded `*ConfigDirExists` flags do this without an `onAppear` round-trip). Open the popover — `SetupView` takes over (Work missing); the Personal row's button is disabled and reads *"Logged in — Personal"*. Click *Log In — Work*, complete the `claude` login, exit the REPL. The popover auto-advances to `MainMenuView` within ~2 s (or instantly on next popover open via `.onAppear`), both buttons enabled and the icon back to the last-launched account symbol.
 
 ### 9a. Both dirs present — no false warning
 
@@ -90,17 +90,29 @@ Same as #1 with Work.
 ### 10. First-run, both dirs missing
 
 **Setup.** Quit ClaudeSwitcher. `defaults delete com.thepixelme.ClaudeSwitcher hasCompletedSetup`. `rm -rf ~/.claude-personal ~/.claude-work`. Reopen.
-**Expected.** Setup screen. *Get Started* does **not** advance until both dirs exist. After creating them and clicking, normal UI appears.
+**Expected.** Setup screen with two *Log In — …* buttons. Auto-advance does **not** fire until both dirs exist. Click each button in turn, complete both `claude` logins, exit the REPLs. Within ~2 s of the second login finishing (or instantly on next popover open), the screen advances to `MainMenuView`.
 
 ### 11. First-run, both dirs already present
 
 **Setup.** Same as #10 but leave both dirs in place.
-**Expected.** Setup screen shows *"Both accounts detected."* *Get Started* advances on click.
+**Expected.** Setup screen briefly shows *"Both accounts detected."* and **auto-advances to `MainMenuView` with no perceptible delay** via the `.onAppear` path — no click required. If the user waits ~2 s instead, the `Timer.publish` tick also advances the screen; either way the user never has to confirm.
 
 ### 11a. Same-directory / symlink misconfiguration
 
 **Setup.** `rm -rf ~/.claude-work && ln -s ~/.claude-personal ~/.claude-work`. `defaults delete com.thepixelme.ClaudeSwitcher hasCompletedSetup`. Reopen.
-**Expected.** Both `configDirExists` checks return true (symlink target exists and is a directory), but the canonical paths are identical. Click *Get Started* — setup refuses to advance with inline error: *"~/.claude-personal and ~/.claude-work resolve to the same directory…"* Remove the symlink and recreate `~/.claude-work` as a real directory; *Get Started* advances.
+**Expected.** Both `configDirExists` checks return true (symlink target exists and is a directory), but the canonical paths are identical. Open the popover — auto-advance attempts, the same-canonical-path check trips, and the screen surfaces the inline error *"~/.claude-personal and ~/.claude-work resolve to the same directory…"* The setup screen **does not** advance to `MainMenuView`. Remove the symlink and recreate `~/.claude-work` as a real directory; the next auto-advance tick (or popover reopen) advances normally.
+
+### 11b. Log In button opens Terminal and reaches `claude`
+
+**Setup.** `rm -rf ~/.claude-personal` (or pick a clean account).
+**Action.** Open the popover and click *Log In — Personal*. Before letting `claude` run, switch to the Terminal window and run `which claude`.
+**Expected.** Terminal.app (or the user's registered `.command` handler) opens a new window already running `CLAUDE_CONFIG_DIR=~/.claude-personal claude`. **No Automation TCC prompt appears** — the button uses Launch Services, not Apple Events. `which claude` resolves to the installed CLI because the script runs inside a login shell that picks up Homebrew/nvm/asdf PATH entries. The `claude` REPL is sitting at its first-run OAuth prompt. If `which claude` returns nothing on a machine where the CLI is installed, login-shell PATH inheritance has regressed and the button mechanism is broken — fall back to copy-paste from the visible command above the button.
+
+### 11c. Log In button — custom `.command` handler
+
+**Setup.** In Finder, Get Info on any `.command` file and set "Open with" to iTerm.app, Ghostty.app, or another terminal emulator; click "Change All".
+**Action.** Click *Log In — Personal*.
+**Expected.** The chosen terminal app opens a new window/tab running `CLAUDE_CONFIG_DIR=~/.claude-personal claude`. Launch Services respects the user's default handler. Reset back to Terminal.app when done if desired.
 
 ### 12. Login-shell PATH inheritance
 
