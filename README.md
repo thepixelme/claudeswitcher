@@ -5,29 +5,34 @@ A lightweight macOS menu bar app that launches VS Code under one of two separate
 ## Requirements
 
 - macOS 14 (Sonoma) or later
-- Xcode 15 or later (to build)
 - [Visual Studio Code](https://code.visualstudio.com) installed (stock build; VS Code Insiders / Cursor / VSCodium not supported in v1)
 - [Claude Code CLI](https://claude.ai) — install with:
   ```
   curl -fsSL https://claude.ai/install.sh | bash
   ```
 
-## Build & run
+## Install
 
-1. Open `ClaudeSwitcher.xcodeproj` in Xcode.
-2. Select the `ClaudeSwitcher` scheme and press ⌘R.
+ClaudeSwitcher is not signed with an Apple Developer ID. The Homebrew path avoids Gatekeeper entirely; the direct-download path needs one extra click the first time.
 
-The app appears in the menu bar (no Dock icon).
+### Option A — Homebrew (recommended)
 
-### Build settings (set on the app target)
+```
+brew tap thepixelme/tap
+brew install --cask claudeswitcher
+```
 
-- `PRODUCT_BUNDLE_IDENTIFIER = com.thepixelme.ClaudeSwitcher`
-- `MACOSX_DEPLOYMENT_TARGET = 14.0`
-- `INFOPLIST_KEY_LSUIElement = YES`
-- `INFOPLIST_KEY_NSAppleEventsUsageDescription = "ClaudeSwitcher quits Visual Studio Code so it can be relaunched under a different Claude account."`
-- `INFOPLIST_KEY_NSPrincipalClass = NSApplication`
-- App Sandbox: **disabled**
-- Code signing: ad-hoc (`Sign to Run Locally`) for personal use; switch to a Developer ID certificate to ship.
+The cask installs without the macOS quarantine flag, so Gatekeeper never prompts.
+
+### Option B — Direct download
+
+1. Download the latest `ClaudeSwitcher-x.y.z.dmg` from [the Releases page](https://github.com/thepixelme/claudeswitcher/releases/latest).
+2. Open the DMG and drag **ClaudeSwitcher.app** to **Applications**.
+3. First launch — macOS will block the unsigned app:
+   - **macOS 14 (Sonoma)**: right-click ClaudeSwitcher.app in Applications → **Open** → click **Open** in the prompt.
+   - **macOS 15 (Sequoia) and later**: System Settings → Privacy & Security → scroll to *"ClaudeSwitcher was blocked..."* → **Open Anyway**.
+
+Both paths land at the same first-run setup screen.
 
 ## Initial setup (one time per account)
 
@@ -67,9 +72,9 @@ If you deny the prompt, the launcher reports `quitRequestFailed` with instructio
 
 ## Known quirks
 
-### Ad-hoc builds re-prompt for TCC on every rebuild
+### Ad-hoc builds re-prompt for TCC on every release
 
-The macOS Automation (Apple Events) grant is keyed on the binary's code-signature hash. Every ad-hoc rebuild produces a fresh hash, so macOS treats it as a different app and re-asks. This goes away once the app is signed with a stable Developer ID certificate.
+The macOS Automation (Apple Events) grant is keyed on the binary's code-signature hash. Because ClaudeSwitcher ships ad-hoc-signed (no Developer ID), every release produces a fresh hash and macOS treats it as a different app — so the *"ClaudeSwitcher would like to control Visual Studio Code"* prompt reappears once after each upgrade. Approve it again and it stays quiet until the next version.
 
 ### Config-dir validation is shallow
 
@@ -82,6 +87,27 @@ ClaudeSwitcher does **not** probe whether `claude` is on PATH at any point — t
 ### Hostile shell rc files
 
 If `~/.zshrc` (or your `$SHELL`'s rc file) hangs — e.g. waits on stdin, hits a slow network probe — ClaudeSwitcher bounds the PATH lookup at 3 seconds and falls back to the launchd environment. VS Code will still launch, but its integrated terminal may not see Homebrew / nvm / asdf paths. Look for a `ShellEnvironment: ...` line in Console.app if you suspect this.
+
+## Building from source
+
+For contributors, or if you'd rather build locally instead of installing a release. Requires Xcode 15 or later.
+
+1. Open `ClaudeSwitcher.xcodeproj` in Xcode.
+2. Select the `ClaudeSwitcher` scheme and press ⌘R.
+
+The app appears in the menu bar (no Dock icon).
+
+### Build settings (set on the app target)
+
+- `PRODUCT_BUNDLE_IDENTIFIER = com.thepixelme.claudeswitcher`
+- `MACOSX_DEPLOYMENT_TARGET = 14.0`
+- `INFOPLIST_KEY_LSUIElement = YES`
+- `INFOPLIST_KEY_NSAppleEventsUsageDescription = "ClaudeSwitcher quits Visual Studio Code so it can be relaunched under a different Claude account."`
+- `INFOPLIST_KEY_NSPrincipalClass = NSApplication`
+- `CODE_SIGN_ENTITLEMENTS = ClaudeSwitcher/ClaudeSwitcher.entitlements` (declares `com.apple.security.automation.apple-events`, required under Hardened Runtime for the VS Code quit/relaunch to work)
+- App Sandbox: **disabled**
+- Hardened Runtime: **enabled**
+- Code signing: ad-hoc (`Sign to Run Locally`). Same setting used for release builds — the Homebrew cask uses `no_quarantine` so Gatekeeper doesn't gate it.
 
 ## What's NOT supported
 
