@@ -13,18 +13,7 @@ A lightweight macOS menu bar app that launches VS Code under one of two separate
 
 ## Install
 
-ClaudeSwitcher is not signed with an Apple Developer ID. The Homebrew path avoids Gatekeeper entirely; the direct-download path needs one extra click the first time.
-
-### Option A — Homebrew (recommended)
-
-```
-brew tap thepixelme/tap
-brew install --cask claudeswitcher
-```
-
-The cask installs without the macOS quarantine flag, so Gatekeeper never prompts.
-
-### Option B — Direct download
+ClaudeSwitcher is distributed as an ad-hoc-signed `.dmg` — not signed with an Apple Developer ID. macOS will block it on first launch; one extra click unblocks it permanently.
 
 1. Download the latest `ClaudeSwitcher-x.y.z.dmg` from [the Releases page](https://github.com/thepixelme/claudeswitcher/releases/latest).
 2. Open the DMG and drag **ClaudeSwitcher.app** to **Applications**.
@@ -32,7 +21,9 @@ The cask installs without the macOS quarantine flag, so Gatekeeper never prompts
    - **macOS 14 (Sonoma)**: right-click ClaudeSwitcher.app in Applications → **Open** → click **Open** in the prompt.
    - **macOS 15 (Sequoia) and later**: System Settings → Privacy & Security → scroll to *"ClaudeSwitcher was blocked..."* → **Open Anyway**.
 
-Both paths land at the same first-run setup screen.
+Then continue to the first-run setup below.
+
+> A Homebrew tap (`thepixelme/tap`) also exists if you prefer `brew install --cask claudeswitcher`. As of Homebrew 5.0 it no longer skips Gatekeeper, so the same first-launch unblock step above applies.
 
 ## Initial setup (one time per account)
 
@@ -107,7 +98,7 @@ The app appears in the menu bar (no Dock icon).
 - `CODE_SIGN_ENTITLEMENTS = ClaudeSwitcher/ClaudeSwitcher.entitlements` (declares `com.apple.security.automation.apple-events`, required under Hardened Runtime for the VS Code quit/relaunch to work)
 - App Sandbox: **disabled**
 - Hardened Runtime: **enabled**
-- Code signing: ad-hoc (`Sign to Run Locally`). Same setting used for release builds — the Homebrew cask uses `no_quarantine` so Gatekeeper doesn't gate it.
+- Code signing: ad-hoc (`Sign to Run Locally`). Same setting used for release builds — users unblock the app once on first launch via System Settings → Privacy & Security.
 
 ## What's NOT supported
 
