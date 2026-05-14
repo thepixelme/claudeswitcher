@@ -18,7 +18,7 @@ For deeper rationale on any design choice, the historical 1122-line build prompt
 
 ## Project facts
 
-- **Stack.** macOS SwiftUI menu-bar app. Deployment target: **macOS 14 (Sonoma) or later**. Built in Xcode. No SwiftPM, no third-party Swift packages, no CocoaPods.
+- **Stack.** macOS SwiftUI menu-bar app. Deployment target: **macOS 26 (Tahoe) or later**. Built in Xcode. No SwiftPM, no third-party Swift packages, no CocoaPods.
 - **Tests.** None. No CI. Verification is the 16 manual scenarios in [docs/verification.md](docs/verification.md). **The cross-cutting check is `echo $CLAUDE_CONFIG_DIR` inside every launched VS Code.** If you can't run that check, you can't verify the change.
 - **Git.** Local repo at the project root. There is no remote at the time of writing.
 - **Out of scope.** VS Code Insiders / Cursor / VSCodium (different bundle IDs). The `npm install -g @anthropic-ai/claude-code` route — the setup screen shows the curl one-liner only. Preferences window. Auto-update. App Sandbox. Mac App Store distribution.

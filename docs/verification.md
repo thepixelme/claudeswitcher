@@ -1,6 +1,6 @@
 # Verification
 
-ClaudeSwitcher has **no automated tests**. Verification is a manual walkthrough of the 16 scenarios below. Run them on macOS 14+ before shipping any change that touches the launcher, state machine, or popover gate.
+ClaudeSwitcher has **no automated tests**. Verification is a manual walkthrough of the 16 scenarios below. Run them on macOS 26+ before shipping any change that touches the launcher, state machine, or popover gate.
 
 ## The cross-cutting check
 

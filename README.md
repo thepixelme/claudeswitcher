@@ -4,7 +4,7 @@ A lightweight macOS menu bar app that launches VS Code under one of two separate
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 26 (Tahoe) or later
 - [Visual Studio Code](https://code.visualstudio.com) installed (stock build; VS Code Insiders / Cursor / VSCodium not supported in v1)
 - [Claude Code CLI](https://claude.ai) — install with:
   ```
@@ -17,9 +17,7 @@ ClaudeSwitcher is distributed as an ad-hoc-signed `.dmg` — not signed with an 
 
 1. Download the latest `ClaudeSwitcher-x.y.z.dmg` from [the Releases page](https://github.com/thepixelme/claudeswitcher/releases/latest).
 2. Open the DMG and drag **ClaudeSwitcher.app** to **Applications**.
-3. First launch — macOS will block the unsigned app:
-   - **macOS 14 (Sonoma)**: right-click ClaudeSwitcher.app in Applications → **Open** → click **Open** in the prompt.
-   - **macOS 15 (Sequoia) and later**: System Settings → Privacy & Security → scroll to *"ClaudeSwitcher was blocked..."* → **Open Anyway**.
+3. First launch — macOS will block the unsigned app. Open System Settings → Privacy & Security → scroll to *"ClaudeSwitcher was blocked..."* → **Open Anyway**.
 
 Then continue to the first-run setup below.
 
@@ -81,7 +79,7 @@ If `~/.zshrc` (or your `$SHELL`'s rc file) hangs — e.g. waits on stdin, hits a
 
 ## Building from source
 
-For contributors, or if you'd rather build locally instead of installing a release. Requires Xcode 15 or later.
+For contributors, or if you'd rather build locally instead of installing a release. Requires Xcode 26 or later.
 
 1. Open `ClaudeSwitcher.xcodeproj` in Xcode.
 2. Select the `ClaudeSwitcher` scheme and press ⌘R.
@@ -91,7 +89,7 @@ The app appears in the menu bar (no Dock icon).
 ### Build settings (set on the app target)
 
 - `PRODUCT_BUNDLE_IDENTIFIER = com.thepixelme.claudeswitcher`
-- `MACOSX_DEPLOYMENT_TARGET = 14.0`
+- `MACOSX_DEPLOYMENT_TARGET = 26.0`
 - `INFOPLIST_KEY_LSUIElement = YES`
 - `INFOPLIST_KEY_NSAppleEventsUsageDescription = "ClaudeSwitcher quits Visual Studio Code so it can be relaunched under a different Claude account."`
 - `INFOPLIST_KEY_NSPrincipalClass = NSApplication`

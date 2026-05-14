@@ -19,7 +19,7 @@ struct MenuBarView: View {
             }
         }
         .onAppear { appState.refreshConfigDirExistence() }
-        .frame(width: 260)
+        .frame(width: 300)
     }
 }
 
@@ -27,9 +27,16 @@ struct MainMenuView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ClaudeSwitcher").font(.headline)
-            Divider()
+        VStack(alignment: .leading, spacing: 6) {
+            Text("ClaudeSwitcher")
+                .font(.headline)
+                .padding(.horizontal, 10)
+                .padding(.top, 4)
+            Text("ACCOUNTS")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.top, 2)
             ForEach(ClaudeAccount.allCases) { account in
                 let dirExists = (account == .personal)
                     ? appState.personalConfigDirExists
@@ -42,8 +49,8 @@ struct MainMenuView: View {
                         "Open VS Code — \(account.displayName)",
                         systemImage: account.menuBarIcon
                     )
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .buttonStyle(RowButtonStyle())
                 // §4 contract: re-entrancy guard AND missing-dir gating.
                 .disabled(appState.isLaunching || !dirExists)
 
@@ -54,12 +61,20 @@ struct MainMenuView: View {
                     Text("\(account.configDir) not found. Re-run setup.")
                         .font(.caption)
                         .foregroundStyle(.red)
+                        .padding(.horizontal, 10)
                 }
             }
             Divider()
-            Button("Quit") { NSApplication.shared.terminate(nil) }
+                .padding(.horizontal, 10)
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Text("Quit")
+            }
+            .buttonStyle(RowButtonStyle())
         }
-        .padding(12)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
     }
 
     @MainActor
@@ -123,7 +138,7 @@ struct SetupView: View {
     private let autoAdvanceTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Welcome to ClaudeSwitcher").font(.headline)
 
             // Three-way branching on what's already present.
@@ -144,7 +159,7 @@ struct SetupView: View {
                 Text(validationError).font(.caption).foregroundStyle(.red)
             }
         }
-        .padding(12)
+        .padding(14)
         .onAppear { tryAutoAdvance() }
         .onReceive(autoAdvanceTimer) { _ in tryAutoAdvance() }
     }
@@ -160,9 +175,9 @@ struct SetupView: View {
         Text("curl -fsSL https://claude.ai/install.sh | bash")
             .font(.system(.caption, design: .monospaced))
             .textSelection(.enabled)
-            .padding(6)
-            .background(Color.secondary.opacity(0.1))
-            .cornerRadius(4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
         Text("Log into each account once:")
             .font(.caption)
@@ -172,28 +187,27 @@ struct SetupView: View {
             let dirExists = (account == .personal)
                 ? appState.personalConfigDirExists
                 : appState.workConfigDirExists
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
                 // account.configDir form (~/.claude-personal) is what we want
                 // users to type — the shell expands the tilde, and the
                 // unexpanded form is portable across machines.
                 Text("CLAUDE_CONFIG_DIR=\(account.configDir) claude")
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
-                    .padding(6)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(4)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 Button {
                     openLoginInTerminal(for: account)
                 } label: {
                     if dirExists {
                         Label("Logged in — \(account.displayName)", systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         Label("Log In — \(account.displayName)", systemImage: "person.crop.circle.badge.plus")
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .buttonStyle(.glass)
                 .disabled(dirExists)
             }
         }
