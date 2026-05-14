@@ -22,6 +22,7 @@ For deeper rationale on any design choice, the historical 1122-line build prompt
 - **Tests.** None. No CI. Verification is the 16 manual scenarios in [docs/verification.md](docs/verification.md). **The cross-cutting check is `echo $CLAUDE_CONFIG_DIR` inside every launched VS Code.** If you can't run that check, you can't verify the change.
 - **Git.** Local repo at the project root. There is no remote at the time of writing.
 - **Out of scope.** VS Code Insiders / Cursor / VSCodium (different bundle IDs). The `npm install -g @anthropic-ai/claude-code` route — the setup screen shows the curl one-liner only. Preferences window. Auto-update. App Sandbox. Mac App Store distribution.
+- **Releasing.** Cutting a signed-and-notarized DMG and pushing to the Homebrew tap is documented in [RELEASING.md](RELEASING.md).
 - **Spec deviation.** One: `VSCodeLaunchError.quitRequestFailed` was added to handle `NSRunningApplication.terminate()` returning `false` (typically TCC-denied Apple Events). The original spec ignored the Bool return. Everything else in [claude-switcher-prompt.md](claude-switcher-prompt.md) is authoritative.
 
 ## Load-bearing patterns — do not "simplify"
@@ -44,7 +45,6 @@ Each of these has a *why* in [docs/code.md](docs/code.md). The short version:
 
 ## Quirks worth knowing
 
-- **Ad-hoc rebuilds re-prompt for TCC.** The macOS Automation grant is keyed on the binary's code-signature hash. Every ad-hoc rebuild produces a fresh hash, so macOS treats it as a different app. Not a bug; goes away with Developer ID signing.
 - **Config-dir validation is shallow.** An empty `~/.claude-personal` directory passes the check. A logged-out account surfaces its problem only when the user tries to use Claude inside VS Code. Documented as a known limitation.
 - **The app needs `NSAppleEventsUsageDescription`.** Required because `NSRunningApplication.terminate()` sends an Apple Event to ask VS Code to quit. The string must be set via `INFOPLIST_KEY_NSAppleEventsUsageDescription` on the build target. See [README.md](README.md) for the exact value. (The setup-screen Log In buttons do **not** use Apple Events — they hand a `.command` file to Launch Services. An earlier iteration used `NSAppleScript`, but the resulting Automation TCC prompt never surfaced for this `LSUIElement` app, leaving users with an invisible failure. Don't reintroduce AppleScript here.)
 - **App Sandbox is disabled.** This app needs to launch other apps with custom env vars and enumerate running apps via `NSWorkspace`. Sandboxing is more trouble than it's worth here. The trade-off precludes Mac App Store distribution.

@@ -74,7 +74,7 @@ Same as #1 with Work.
 
 **Setup.** Clean machine (or revoked Automation grant — but better to test on truly clean).
 **Action.** Trigger the first quit-and-relaunch.
-**Expected.** macOS shows *"ClaudeSwitcher would like to control 'Visual Studio Code'"* with the usage string *"ClaudeSwitcher quits Visual Studio Code so it can be relaunched under a different Claude account."* Approve. Subsequent switches must not prompt again until the next ad-hoc rebuild. Clicking *Log In — Personal* / *Log In — Work* on the setup screen must **not** show any Automation prompt — those buttons go through Launch Services (document-open), not Apple Events.
+**Expected.** macOS shows *"ClaudeSwitcher would like to control 'Visual Studio Code'"* with the usage string *"ClaudeSwitcher quits Visual Studio Code so it can be relaunched under a different Claude account."* Approve. Subsequent switches and subsequent app upgrades must not prompt again. Clicking *Log In — Personal* / *Log In — Work* on the setup screen must **not** show any Automation prompt — those buttons go through Launch Services (document-open), not Apple Events.
 
 ### 9. Missing config dir (post-setup recovery)
 

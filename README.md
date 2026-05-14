@@ -13,15 +13,15 @@ A lightweight macOS menu bar app that launches VS Code under one of two separate
 
 ## Install
 
-ClaudeSwitcher is distributed as an ad-hoc-signed `.dmg` — not signed with an Apple Developer ID. macOS will block it on first launch; one extra click unblocks it permanently.
+ClaudeSwitcher ships as a Developer ID-signed, Apple-notarized `.dmg`. No Gatekeeper workaround required.
 
 1. Download the latest `ClaudeSwitcher-x.y.z.dmg` from [the Releases page](https://github.com/thepixelme/claudeswitcher/releases/latest).
 2. Open the DMG and drag **ClaudeSwitcher.app** to **Applications**.
-3. First launch — macOS will block the unsigned app. Open System Settings → Privacy & Security → scroll to *"ClaudeSwitcher was blocked..."* → **Open Anyway**.
+3. Launch **ClaudeSwitcher** from Applications. The icon appears in the menu bar.
 
 Then continue to the first-run setup below.
 
-> A Homebrew tap (`thepixelme/tap`) also exists if you prefer `brew install --cask claudeswitcher`. As of Homebrew 5.0 it no longer skips Gatekeeper, so the same first-launch unblock step above applies.
+> A Homebrew tap (`thepixelme/tap`) also exists if you prefer `brew install --cask claudeswitcher`.
 
 ## Initial setup (one time per account)
 
@@ -61,10 +61,6 @@ If you deny the prompt, the launcher reports `quitRequestFailed` with instructio
 
 ## Known quirks
 
-### Ad-hoc builds re-prompt for TCC on every release
-
-The macOS Automation (Apple Events) grant is keyed on the binary's code-signature hash. Because ClaudeSwitcher ships ad-hoc-signed (no Developer ID), every release produces a fresh hash and macOS treats it as a different app — so the *"ClaudeSwitcher would like to control Visual Studio Code"* prompt reappears once after each upgrade. Approve it again and it stays quiet until the next version.
-
 ### Config-dir validation is shallow
 
 ClaudeSwitcher only checks that `~/.claude-personal` and `~/.claude-work` exist *as directories*. An empty directory passes. A logged-out account surfaces its problem only when you actually try to use Claude inside VS Code.
@@ -79,7 +75,7 @@ If `~/.zshrc` (or your `$SHELL`'s rc file) hangs — e.g. waits on stdin, hits a
 
 ## Building from source
 
-For contributors, or if you'd rather build locally instead of installing a release. Requires Xcode 26 or later.
+For contributors, or if you'd rather build locally instead of installing a release. Requires Xcode 26 or later. To cut a signed-and-notarized release, see [RELEASING.md](RELEASING.md).
 
 1. Open `ClaudeSwitcher.xcodeproj` in Xcode.
 2. Select the `ClaudeSwitcher` scheme and press ⌘R.
@@ -96,7 +92,7 @@ The app appears in the menu bar (no Dock icon).
 - `CODE_SIGN_ENTITLEMENTS = ClaudeSwitcher/ClaudeSwitcher.entitlements` (declares `com.apple.security.automation.apple-events`, required under Hardened Runtime for the VS Code quit/relaunch to work)
 - App Sandbox: **disabled**
 - Hardened Runtime: **enabled**
-- Code signing: ad-hoc (`Sign to Run Locally`). Same setting used for release builds — users unblock the app once on first launch via System Settings → Privacy & Security.
+- Code signing: automatic, Developer ID Application (team `N6N6FTF7PV`) under Hardened Runtime. Release builds are notarized via Xcode's *Distribute App → Direct Distribution* flow — see [RELEASING.md](RELEASING.md).
 
 ## What's NOT supported
 
