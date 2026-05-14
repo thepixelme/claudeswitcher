@@ -1,7 +1,8 @@
+import AppKit
 import SwiftUI
 
-/// Row-shaped button style: subtle hover highlight, slightly darker pressed state,
-/// dimmed when disabled. Used for the account rows and Quit in MainMenuView.
+/// Row-shaped button style: system-accent hover highlight, slightly darker pressed
+/// state, dimmed when disabled. Used for the account rows and Quit in MainMenuView.
 /// Setup view's prominent Log In CTAs use the system `.buttonStyle(.glass)` instead.
 struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -15,6 +16,7 @@ struct RowButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
+                .foregroundStyle(foregroundColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -34,13 +36,23 @@ struct RowButtonStyle: ButtonStyle {
                 }
         }
 
-        // Color.primary adapts to light/dark mode automatically — white-tint on
-        // dark, black-tint on light. Same trick AppKit menus use.
+        // Matches the highlight macOS uses for menu items — follows the user's
+        // accent color in System Settings.
         private var fillColor: Color {
             guard isEnabled else { return .clear }
-            if configuration.isPressed { return Color.primary.opacity(0.18) }
-            if isHovered { return Color.primary.opacity(0.10) }
+            if configuration.isPressed { return Color.accentColor.opacity(0.85) }
+            if isHovered { return Color.accentColor }
             return .clear
+        }
+
+        // selectedMenuItemTextColor is the dynamic system color paired with
+        // the accent fill — white on the default blue, dark on light accents
+        // like Yellow. Avoids hardcoding .white and breaking contrast.
+        private var foregroundColor: Color {
+            if isEnabled && (isHovered || configuration.isPressed) {
+                return Color(nsColor: .selectedMenuItemTextColor)
+            }
+            return .primary
         }
     }
 }

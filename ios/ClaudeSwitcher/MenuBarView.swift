@@ -41,14 +41,22 @@ struct MainMenuView: View {
                 let dirExists = (account == .personal)
                     ? appState.personalConfigDirExists
                     : appState.workConfigDirExists
+                let isActive = (account == appState.lastLaunched)
 
                 Button {
                     openVSCode(as: account)
                 } label: {
-                    Label(
-                        "Open VS Code — \(account.displayName)",
-                        systemImage: account.menuBarIcon
-                    )
+                    HStack(spacing: 6) {
+                        Label(
+                            "Open VS Code — \(account.displayName)",
+                            systemImage: account.menuBarIcon
+                        )
+                        Spacer(minLength: 8)
+                        if isActive {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                        }
+                    }
                 }
                 .buttonStyle(RowButtonStyle())
                 // §4 contract: re-entrancy guard AND missing-dir gating.
