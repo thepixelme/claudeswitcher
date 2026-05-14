@@ -2,6 +2,10 @@
 
 A lightweight macOS menu bar app that launches VS Code under one of two separate Claude Code accounts (personal / work) by injecting `CLAUDE_CONFIG_DIR` into the launched process. One click, no terminal.
 
+| Personal account active | Work account active |
+| :---: | :---: |
+| ![ClaudeSwitcher menu bar popover with Personal account active](assets/img/screenshot-0.png) | ![ClaudeSwitcher menu bar popover with Work account active](assets/img/screenshot-1.png) |
+
 ## Requirements
 
 - macOS 26 (Tahoe) or later
